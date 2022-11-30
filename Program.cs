@@ -31,6 +31,26 @@ app.MapGet("/status", async (context) =>
   });
 });
 
+// curl -v -H "EventStreamId: eesId" -F commits=@commits.csv http://localhost:5058/commits
+app.MapPost("/commits", async (context) =>
+{
+  string id = context.Request.Headers["EventStreamId"];
+  var commitsFile = context.Request.Form.Files["commits"];
+  if (string.IsNullOrEmpty(id)) throw new InvalidDataException("No header for EventStreamId");
+  if (commitsFile == null) throw new InvalidDataException("No commits");
+
+  using var memoryStream = new MemoryStream();
+  await commitsFile.CopyToAsync(memoryStream);
+
+  var commits = System.Text.Encoding.UTF8.GetString(memoryStream.ToArray());
+
+  await context.Response.WriteAsJsonAsync(new
+  {
+    id = id,
+    commits = commits,
+  });
+});
+
 app.MapGet("/see", async (context) =>
 {
   await context.Session.LoadAsync();
@@ -41,7 +61,8 @@ app.MapGet("/see", async (context) =>
   while (true)
   {
     await Task.Delay(10000);
-    if (context.RequestAborted.IsCancellationRequested == true) {
+    if (context.RequestAborted.IsCancellationRequested == true)
+    {
       app.Logger.LogInformation($"User {id} closed event stream");
       break;
     }
