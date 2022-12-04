@@ -30,6 +30,7 @@ app.MapGet("/status", async (context) =>
   });
 });
 
+string script = System.IO.File.ReadAllText("get-commits.sh");
 var clients = new List<Client>();
 
 app.MapGet("/see", async (context) =>
@@ -52,15 +53,22 @@ app.MapGet("/see", async (context) =>
   }
 });
 
-// curl -v -H "EventStreamId: eesId" -F commits=@commits.csv http://localhost:5058/commits
+app.MapGet("/script/{id}", async (HttpContext context, string id) =>
+{
+  var userScript = script.Replace("{{ID}}", id);
+  await context.Response.WriteAsync(userScript);
+});
+
+
 app.MapPost("/commits", async (context) =>
 {
   string id = context.Request.Headers["EventStreamId"];
+  
   if (string.IsNullOrEmpty(id)) { await Results.BadRequest().ExecuteAsync(context); return; }
   var client = clients.Find((client) => client.Id == id);
   if (client == null) { await Results.Unauthorized().ExecuteAsync(context); return; }
 
-  var commitsFile = context.Request.Form.Files["commits"];
+  var commitsFile = context.Request.Form.Files[0];
   if (commitsFile == null) { await Results.BadRequest().ExecuteAsync(context); return; }
 
   await client.Context.SSESendEventAsync(
