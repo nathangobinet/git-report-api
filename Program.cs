@@ -1,4 +1,5 @@
-var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+using Microsoft.AspNetCore.HttpOverrides;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDistributedMemoryCache();
@@ -8,14 +9,6 @@ builder.Services.AddSession(options =>
   options.IdleTimeout = TimeSpan.FromSeconds(10);
   options.Cookie.HttpOnly = true;
   options.Cookie.IsEssential = true;
-});
-
-builder.Services.AddCors(options =>
-{
-  options.AddPolicy(name: MyAllowSpecificOrigins, builder =>
-  {
-    builder.AllowAnyOrigin();
-  });
 });
 
 var app = builder.Build();
@@ -99,7 +92,10 @@ app.MapGet("/get-commits/{id}", async (HttpContext context, string id) => {
   }
 });
 
-app.UseCors(MyAllowSpecificOrigins);
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 app.UseSession();
 
