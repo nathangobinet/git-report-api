@@ -4,7 +4,7 @@ USERNAME=$(git config user.email)
 FILE="./commits.csv"
 
 rm $FILE 2>/dev/null && \
-  echo "❌ Deleted old ./commits.csv"
+  echo "❌ Deleted old $FILE"
 
 echo "🔍 Searching for .git directories..."
 find . -type d -name node_modules -prune -false -o -name ".git" | while read fname; do
