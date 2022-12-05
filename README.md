@@ -2,6 +2,8 @@
 
 Api to get all the commits of a dev environment throught a shell script and Event Stream.
 
+👀 Alpha: https://flash.vps.webdock.cloud/
+
 See `Program.cs` for all routes.
 
 See `get-commits.sh` for the commits script.
