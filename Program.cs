@@ -24,7 +24,25 @@ app.MapGet("/status", async (context) =>
 });
 
 string script = System.IO.File.ReadAllText("get-commits.sh");
-var clients = new List<Client>();
+var clients = new Dictionary<string, Client>();
+
+var deleteCommits = (string id) =>
+{
+  var client = clients[id];
+  if (client == null)
+  {
+    app.Logger.LogWarning($"No client found for {id}");
+    return;
+  }
+  if (client.CommitsFile == null)
+  {
+    app.Logger.LogInformation($"No commits to delete for {id}");
+    return;
+  }
+  client.CommitsFile.Dispose();
+  app.Logger.LogInformation($"Deleted commits for {id}");
+};
+
 
 app.MapGet("/see", async (context) =>
 {
@@ -33,18 +51,20 @@ app.MapGet("/see", async (context) =>
   await context.SSEInitAsync();
   app.Logger.LogInformation($"User {id} opened event stream");
   await context.SSESendEventAsync(new SSEEvent("init") { Id = id, Retry = 10 });
-  clients.Add(new Client(id, context));
+  clients.Add(id, new Client(context));
   while (true)
   {
     await Task.Delay(10000);
     if (context.RequestAborted.IsCancellationRequested == true)
     {
       app.Logger.LogInformation($"User {id} closed event stream");
+      deleteCommits(id);
       break;
     }
     await context.SSESendEventAsync(new SSEEvent("waiting-commits") { Id = id, Retry = 10 });
   }
 });
+
 
 app.MapGet("/script/{id}", async (HttpContext context, string id) =>
 {
@@ -56,9 +76,9 @@ app.MapGet("/script/{id}", async (HttpContext context, string id) =>
 app.MapPost("/commits", async (context) =>
 {
   string id = context.Request.Headers["EventStreamId"];
-  
+
   if (string.IsNullOrEmpty(id)) { await Results.BadRequest().ExecuteAsync(context); return; }
-  var client = clients.Find((client) => client.Id == id);
+  var client = clients[id];
   if (client == null) { await Results.Unauthorized().ExecuteAsync(context); return; }
 
   var commitsFile = context.Request.Form.Files[0];
@@ -78,23 +98,18 @@ app.MapPost("/commits", async (context) =>
   );
 });
 
-app.MapGet("/get-commits/{id}", async (HttpContext context, string id) => {
-  var client = clients.Find((client) => client.Id == id);
+app.MapGet("/get-commits/{id}", async (HttpContext context, string id) =>
+{
+  var client = clients[id];
   if (client == null) { await Results.Unauthorized().ExecuteAsync(context); return; }
   if (client.CommitsFile == null) { await Results.NotFound().ExecuteAsync(context); return; }
 
-  // If user commits was already fetched by use
-  //  it throw a ObjectDisposedException
-  try {
-    await Results.File(client.CommitsFile, "application/octet-stream").ExecuteAsync(context);
-  } catch (System.ObjectDisposedException) {
-    await Results.NotFound().ExecuteAsync(context); return; 
-  }
+  await Results.File(client.CommitsFile, "application/octet-stream").ExecuteAsync(context);
 });
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+  ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
 app.UseSession();
