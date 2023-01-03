@@ -64,9 +64,11 @@ app.MapGet("/see", async (context) =>
   });
 
   // Keep connection open and send periodic message while client doesnt cancel request
-  while(!context.RequestAborted.IsCancellationRequested) {
+  while (!context.RequestAborted.IsCancellationRequested)
+  {
     await context.SSESendEventAsync(new SSEEvent("waiting-commits") { Id = id, Retry = 10 });
-    await Task.Delay(10000, context.RequestAborted);
+    // ContinueWith allow to avoid error throwing
+    await Task.Delay(10_000, context.RequestAborted).ContinueWith(task => { });
   }
 });
 
