@@ -13,6 +13,9 @@ builder.Services.AddSession(options =>
 
 var app = builder.Build();
 
+string script = System.IO.File.ReadAllText("get-commits.sh");
+var clients = new Dictionary<string, Client>();
+
 app.MapGet("/status", async (context) =>
 {
   await context.Response.WriteAsJsonAsync(new
@@ -20,11 +23,11 @@ app.MapGet("/status", async (context) =>
     status = "OK",
     date = DateTime.Now,
     sessionId = context.Session.Id,
+    clients = clients.Count,
+    memory = System.GC.GetTotalMemory(true) / 1000,
   });
 });
 
-string script = System.IO.File.ReadAllText("get-commits.sh");
-var clients = new Dictionary<string, Client>();
 
 var deleteCommits = (string id) =>
 {
