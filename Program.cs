@@ -28,8 +28,7 @@ app.MapGet("/status", async (context) =>
   });
 });
 
-
-var deleteCommits = (string id) =>
+var clearClient = (string id) =>
 {
   var client = clients[id];
   if (client == null)
@@ -37,15 +36,17 @@ var deleteCommits = (string id) =>
     app.Logger.LogWarning($"No client found for {id}");
     return;
   }
-  if (client.CommitsFile == null)
+  if (client.CommitsFile != null)
+  {
+    client.CommitsFile.Dispose();
+    app.Logger.LogInformation($"Deleted commits for {id}");
+  }
+  else
   {
     app.Logger.LogInformation($"No commits to delete for {id}");
-    return;
   }
-  client.CommitsFile.Dispose();
-  app.Logger.LogInformation($"Deleted commits for {id}");
+  clients.Remove(id);
 };
-
 
 app.MapGet("/see", async (context) =>
 {
@@ -61,7 +62,7 @@ app.MapGet("/see", async (context) =>
     if (context.RequestAborted.IsCancellationRequested == true)
     {
       app.Logger.LogInformation($"User {id} closed event stream");
-      deleteCommits(id);
+      clearClient(id);
       break;
     }
     await context.SSESendEventAsync(new SSEEvent("waiting-commits") { Id = id, Retry = 10 });
@@ -95,6 +96,8 @@ app.MapPost("/commits", async (context) =>
   client.CommitsFile = new MemoryStream();
   await commitsFile.CopyToAsync(client.CommitsFile);
   client.CommitsFile.Position = 0;
+
+  app.Logger.LogInformation($"Commits received from {id}");
 
   await client.Context.SSESendEventAsync(
     new SSEEvent("commits-ready") { Id = id, Retry = 10 }
