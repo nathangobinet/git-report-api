@@ -56,16 +56,17 @@ app.MapGet("/see", async (context) =>
   app.Logger.LogInformation($"User {id} opened event stream");
   await context.SSESendEventAsync(new SSEEvent("init") { Id = id, Retry = 10 });
   clients.Add(id, new Client(context));
-  while (true)
+
+  context.RequestAborted.Register(() =>
   {
-    await Task.Delay(10000);
-    if (context.RequestAborted.IsCancellationRequested == true)
-    {
-      app.Logger.LogInformation($"User {id} closed event stream");
-      clearClient(id);
-      break;
-    }
+    app.Logger.LogInformation($"User {id} closed event stream");
+    clearClient(id);
+  });
+
+  // Keep connection open and send periodic message while client doesnt cancel request
+  while(!context.RequestAborted.IsCancellationRequested) {
     await context.SSESendEventAsync(new SSEEvent("waiting-commits") { Id = id, Retry = 10 });
+    await Task.Delay(10000, context.RequestAborted);
   }
 });
 
