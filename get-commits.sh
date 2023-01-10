@@ -9,10 +9,10 @@ rm $FILE 2>/dev/null && \
 echo "🔍 Searching for .git directories..."
 find . -type d -name node_modules -prune -false -o -name ".git" | while read fname; do
   # Extract the repository name from the .git directory path
-  REPO=$(echo $fname | rev | cut -d'/' -f 2 | rev)
+  REPO=$(echo $fname | awk -F/ '{print $(NF-1)}')
   echo "📃 Processing commits of $REPO made by $USERNAME";
   # Write the commits to the temporary file
-  git -C $fname --no-pager log --committer="$USERNAME" --pretty=format:"$REPO;%H;%cD;%s" >> $FILE
+  git -C $fname --no-pager log --committer="$USERNAME" --pretty=format:"$REPO;%H;%an;%aD;%s" >> $FILE
   echo "" >> $FILE
 done
 
