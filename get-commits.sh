@@ -12,7 +12,7 @@ find . -type d -name node_modules -prune -false -o -name ".git" | while read fna
   REPO=$(echo $fname | awk -F/ '{print $(NF-1)}')
   echo "📃 Processing commits of $REPO made by $USERNAME";
   # Write the commits to the temporary file
-  git -C $fname --no-pager log --committer="$USERNAME" --pretty=format:"$REPO;%H;%an;%aD;%s" >> $FILE
+  git -C $fname --no-pager log --committer="$USERNAME" --pretty=format:"$REPO;%H;%an;%ae;%aD;%s" >> $FILE
   echo "" >> $FILE
 done
 
