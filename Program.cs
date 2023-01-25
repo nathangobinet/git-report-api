@@ -11,6 +11,15 @@ builder.Services.AddSession(options =>
   options.Cookie.IsEssential = true;
 });
 
+builder.Host.ConfigureLogging(logging =>
+{
+    logging.ClearProviders();
+    logging.AddConsole();
+    if (builder.Environment.IsProduction()) {
+      logging.AddDebug();
+    }
+});
+
 var app = builder.Build();
 
 string script = System.IO.File.ReadAllText("get-commits.sh");
