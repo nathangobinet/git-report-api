@@ -13,11 +13,15 @@ builder.Services.AddSession(options =>
 
 builder.Host.ConfigureLogging(logging =>
 {
-    logging.ClearProviders();
+  logging.ClearProviders();
+  if (builder.Environment.IsProduction())
+  {
+    logging.AddDebug();
+  }
+  else
+  {
     logging.AddConsole();
-    if (builder.Environment.IsProduction()) {
-      logging.AddDebug();
-    }
+  }
 });
 
 var app = builder.Build();
@@ -102,18 +106,16 @@ app.MapGet("/see", async (context) =>
   }
 });
 
-app.MapGet("/script/static", async (HttpContext context, string id) =>
-{
-  await context.Response.WriteAsync(scriptStatic);
-});
-
-
 app.MapGet("/script/{id}", async (HttpContext context, string id) =>
 {
   var userScript = script.Replace("{{ID}}", id);
   await context.Response.WriteAsync(userScript);
 });
 
+app.MapGet("/script/static", async (HttpContext context) =>
+{
+  await context.Response.WriteAsync(scriptStatic);
+});
 
 app.MapPost("/commits", async (context) =>
 {
