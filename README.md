@@ -4,7 +4,7 @@
   </a>
 	</br>
   <h1> Git Report Api </h1>
-  Api to get all the commits of a dev environment throught a shell script and Event Stream.
+  Api to get all the commits on a dev environment through a shell script and Event Stream
  
 </div>
 
