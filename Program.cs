@@ -17,6 +17,25 @@ string script = System.IO.File.ReadAllText("get-commits.sh");
 string scriptStatic = System.IO.File.ReadAllText("get-local-commits.sh");
 var clients = new Dictionary<string, Client>();
 
+Func<Task<UInt32>> intializeGeneratedReports = async () =>
+{
+  UInt32 generatedReports = 0;
+  if (!File.Exists("generated-reports-number.txt")) return generatedReports;
+  var content = await File.ReadAllTextAsync("generated-reports-number.txt");
+  if (content == null) return generatedReports;
+  UInt32.TryParse(content, out generatedReports);
+  return generatedReports;
+};
+
+UInt32 generatedReports = await intializeGeneratedReports();
+app.Logger.LogInformation($"Intialize local state with {generatedReports} generated reports");
+
+System.AppDomain.CurrentDomain.ProcessExit += (object? sender, EventArgs e) =>
+{
+  File.WriteAllText("generated-reports-number.txt", generatedReports.ToString());
+  app.Logger.LogInformation($"Stored {generatedReports} generated reports before exit");
+};
+
 app.MapGet("/status", async (context) =>
 {
   await context.Response.WriteAsJsonAsync(new
@@ -26,6 +45,7 @@ app.MapGet("/status", async (context) =>
     sessionId = context.Session.Id,
     clients = clients.Count,
     memory = System.GC.GetTotalMemory(true) / 1000,
+    generatedReports = generatedReports,
   });
 });
 
@@ -107,6 +127,7 @@ app.MapPost("/commits", async (context) =>
   client.CommitsFile.Position = 0;
 
   app.Logger.LogInformation($"Commits received from {id}");
+  generatedReports += 1;
 
   await client.Context.SSESendEventAsync(
     new SSEEvent("commits-ready") { Id = id, Retry = 10 }
