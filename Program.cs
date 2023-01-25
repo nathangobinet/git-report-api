@@ -16,7 +16,7 @@ builder.Host.ConfigureLogging(logging =>
   logging.ClearProviders();
   if (builder.Environment.IsProduction())
   {
-    logging.AddDebug();
+    logging.AddFile("logs/{Date}.txt");
   }
   else
   {
