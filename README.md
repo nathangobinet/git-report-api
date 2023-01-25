@@ -1,12 +1,22 @@
-# Git Report API (alpha)
+<div align="center">
+  <a href="https://flash.vps.webdock.cloud/">
+	  <img width="150" src="https://raw.githubusercontent.com/adrien-nf/git-report-web/master/public/logo192.png" alt="GitReport">
+  </a>
+	</br>
+  <h1> Git Report Api </h1>
+  Api to get all the commits of a dev environment throught a shell script and Event Stream.
+ 
+</div>
 
-Api to get all the commits of a dev environment throught a shell script and Event Stream.
+<hr>
 
-👀 Alpha: https://flash.vps.webdock.cloud/
+This is the back-end repository. 👀 You may want to visit the [front-end repository](https://github.com/adrien-nf/git-report-web).
 
 See `Program.cs` for all routes.
 
-See `get-commits.sh` for the commits script.
+See `get-commits.sh` and `get-local-commits.sh` for the commits script.
+
+
 
 Simple client example :
 
