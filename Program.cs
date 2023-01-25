@@ -14,6 +14,7 @@ builder.Services.AddSession(options =>
 var app = builder.Build();
 
 string script = System.IO.File.ReadAllText("get-commits.sh");
+string scriptStatic = System.IO.File.ReadAllText("get-local-commits.sh");
 var clients = new Dictionary<string, Client>();
 
 app.MapGet("/status", async (context) =>
@@ -70,6 +71,11 @@ app.MapGet("/see", async (context) =>
     // ContinueWith allow to avoid error throwing
     await Task.Delay(10_000, context.RequestAborted).ContinueWith(task => { });
   }
+});
+
+app.MapGet("/script/static", async (HttpContext context, string id) =>
+{
+  await context.Response.WriteAsync(scriptStatic);
 });
 
 
