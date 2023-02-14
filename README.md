@@ -1,5 +1,5 @@
 <div align="center">
-  <a href="https://flash.vps.webdock.cloud/">
+  <a href="https://git-report.com">
 	  <img width="150" src="https://raw.githubusercontent.com/adrien-nf/git-report-web/master/public/logo192.png" alt="GitReport">
   </a>
 	</br>
