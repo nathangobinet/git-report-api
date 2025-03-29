@@ -11,18 +11,10 @@ builder.Services.AddSession(options =>
   options.Cookie.IsEssential = true;
 });
 
-builder.Host.ConfigureLogging(logging =>
-{
-  logging.ClearProviders();
-  if (builder.Environment.IsProduction())
-  {
-    logging.AddFile("logs/{Date}.txt");
-  }
-  else
-  {
-    logging.AddConsole();
-  }
-});
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+builder.Logging.AddAzureWebAppDiagnostics();
 
 var app = builder.Build();
 
@@ -49,7 +41,9 @@ System.AppDomain.CurrentDomain.ProcessExit += (object? sender, EventArgs e) =>
   app.Logger.LogInformation($"Stored {generatedReports} generated reports before exit");
 };
 
-app.MapGet("/status", async (context) =>
+var apiGroup = app.MapGroup("/api");
+
+apiGroup.MapGet("/status", async (context) =>
 {
   await context.Response.WriteAsJsonAsync(new
   {
@@ -90,34 +84,46 @@ app.MapGet("/see", async (context) =>
   app.Logger.LogInformation($"User {id} opened event stream");
   await context.SSESendEventAsync(new SSEEvent("init") { Id = id, Retry = 10 });
   clients.Add(id, new Client(context));
+  
+  // Azure reverse proxy doesnt correctly handle request abortion
+  // So use a 5 minute timeout as a backup solution
+  var timeoutCancellationTokenSource = new CancellationTokenSource();
+  var timeoutTask = Task.Delay(TimeSpan.FromMinutes(5), timeoutCancellationTokenSource.Token);
 
   context.RequestAborted.Register(() =>
   {
     app.Logger.LogInformation($"User {id} closed event stream");
+    timeoutCancellationTokenSource.Cancel();
     clearClient(id);
   });
 
   // Keep connection open and send periodic message while client doesnt cancel request
-  while (!context.RequestAborted.IsCancellationRequested)
+  while (!context.RequestAborted.IsCancellationRequested && !timeoutTask.IsCompleted)
   {
     await context.SSESendEventAsync(new SSEEvent("waiting-commits") { Id = id, Retry = 10 });
     // ContinueWith allow to avoid error throwing
     await Task.Delay(10_000, context.RequestAborted).ContinueWith(task => { });
   }
+
+  if (timeoutTask.IsCompleted)
+  {
+    app.Logger.LogInformation($"User {id} timed out after 5 minutes.");
+    clearClient(id);
+  }
 });
 
-app.MapGet("/script/{id}", async (HttpContext context, string id) =>
+apiGroup.MapGet("/script/{id}", async (HttpContext context, string id) =>
 {
   var userScript = script.Replace("{{ID}}", id);
   await context.Response.WriteAsync(userScript);
 });
 
-app.MapGet("/script/static", async (HttpContext context) =>
+apiGroup.MapGet("/script/static", async (HttpContext context) =>
 {
   await context.Response.WriteAsync(scriptStatic);
 });
 
-app.MapPost("/commits", async (context) =>
+apiGroup.MapPost("/commits", async (context) =>
 {
   string id = context.Request.Headers["EventStreamId"];
 
@@ -145,7 +151,7 @@ app.MapPost("/commits", async (context) =>
   );
 });
 
-app.MapGet("/get-commits/{id}", async (HttpContext context, string id) =>
+apiGroup.MapGet("/get-commits/{id}", async (HttpContext context, string id) =>
 {
   var client = clients[id];
   if (client == null) { await Results.Unauthorized().ExecuteAsync(context); return; }

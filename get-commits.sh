@@ -25,7 +25,7 @@ read -p "Enter [Y/yes] to agree: " CHOICE
 
 if [ "$CHOICE" = "y" -o "$CHOICE" = "Y" -o "$CHOICE" = "yes" -o "$CHOICE" = "Yes" -o "$CHOICE" = "YES" ]; then
   # Upload the file to the server
-  curl -X POST -H "EventStreamId: {{ID}}"  -F "file=@$FILE" https://flash.vps.webdock.cloud/api/commits && \
+  curl -X POST -H "EventStreamId: {{ID}}"  -F "file=@$FILE" https://white-cliff-055079703.6.azurestaticapps.net/api/commits && \
     rm $FILE && \
     echo "✅ Commits sent, go back to your navigator"
 else
