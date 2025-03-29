@@ -76,7 +76,7 @@ var clearClient = (string id) =>
   clients.Remove(id);
 };
 
-app.MapGet("/see", async (context) =>
+apiGroup.MapGet("/see", async (context) =>
 {
   await context.Session.LoadAsync();
   string id = context.Session.Id;
